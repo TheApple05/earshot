@@ -19,7 +19,7 @@ pub enum Pop {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Config {
+pub struct JitterConfig {
     /// Frames to collect before starting to play (3 = 60 ms of added delay).
     pub target_frames: usize,
     /// Ticks to wait for `target_frames` once a frame is here; then what's buffered plays anyway,
@@ -36,7 +36,7 @@ pub struct Config {
     pub restart_gap: u64,
 }
 
-impl Default for Config {
+impl Default for JitterConfig {
     fn default() -> Self {
         Self { target_frames: 3, max_wait_ticks: 6, max_frames: 12, conceal_ticks: 2, end_ticks: 10, restart_gap: 50 }
     }
@@ -51,13 +51,13 @@ enum State {
 }
 
 pub struct JitterBuffer {
-    cfg: Config,
+    cfg: JitterConfig,
     frames: BTreeMap<u64, Vec<u8>>,
     state: State,
 }
 
 impl JitterBuffer {
-    pub fn new(cfg: Config) -> Self {
+    pub fn new(cfg: JitterConfig) -> Self {
         Self { cfg, frames: BTreeMap::new(), state: State::Buffering { waited: 0 } }
     }
 
@@ -157,7 +157,7 @@ mod tests {
     }
 
     fn buf() -> JitterBuffer {
-        JitterBuffer::new(Config::default())
+        JitterBuffer::new(JitterConfig::default())
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn end_of_speech_goes_silent_then_back_to_buffering() {
-        let cfg = Config::default();
+        let cfg = JitterConfig::default();
         let mut b = buf();
         for s in 0..3 {
             b.push(s, frame(s));
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn a_very_short_sound_plays_after_the_wait_not_with_the_next_one() {
-        let cfg = Config::default();
+        let cfg = JitterConfig::default();
         let mut b = buf();
         b.push(0, frame(0));
         b.push(1, frame(1));
@@ -300,7 +300,7 @@ mod tests {
 
     #[test]
     fn waiting_only_counts_once_a_frame_is_here() {
-        let cfg = Config::default();
+        let cfg = JitterConfig::default();
         let mut b = buf();
         // A long quiet before anyone talks doesn't use up the wait.
         for _ in 0..cfg.max_wait_ticks * 3 {
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn overflow_drops_the_oldest_and_bounds_delay() {
-        let cfg = Config::default();
+        let cfg = JitterConfig::default();
         let mut b = buf();
         for s in 0..(cfg.max_frames as u64 + 5) {
             b.push(s, frame(s));

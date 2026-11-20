@@ -387,7 +387,7 @@ fn paint(draw: &mut dyn DrawContext, draws: &[Draw]) {
         match d {
             Draw::Fill { rect, argb } => draw.fill(*rect, *argb),
             Draw::Quad { points, argb } => draw.quad(*points, *argb),
-            Draw::Text { text, at, rgb } => draw.text(text, *at, 0xFF00_0000 | rgb, true),
+            Draw::Label { text, at, rgb } => draw.text(text, *at, 0xFF00_0000 | rgb, true),
         }
     }
 }

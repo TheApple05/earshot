@@ -1,10 +1,12 @@
 //! Chat lines between the mod API's `Text` and the JSON components `earshot_core::chat`
 //! rewrites. Only what voice chat lines use goes across: literal text, translations
-//! with their arguments, children, colours and decorations, click and hover actions.
+//! with their arguments, children, colours, decorations and click actions. Hover text is
+//! left out: `cargo horizon-mod` reads any use of `TextHover::Text` as building
+//! `text::Text`, which made the launcher refuse Earshot on every later Horizon build.
 //! Anything else (scores, selectors, NBT, objects) becomes plain text, which a voice
 //! chat line never holds.
 use mod_api::Text;
-use mod_api::text::{TextClick, TextContent, TextHover, TextStyle};
+use mod_api::text::{TextClick, TextContent, TextStyle};
 use serde_json::{Map, Value, json};
 
 /// `text` as a JSON component.
@@ -64,9 +66,6 @@ fn style_to_json(style: &TextStyle, o: &mut Map<String, Value>) {
         if !action.is_empty() {
             o.insert("click_event".into(), json!({ "action": action, field: value }));
         }
-    }
-    if let Some(TextHover::Text(t)) = &style.hover {
-        o.insert("hover_event".into(), json!({ "action": "show_text", "value": to_json(&**t) }));
     }
 }
 
@@ -130,14 +129,6 @@ fn object_to_text(o: &Map<String, Value>) -> Text {
             _ => return None,
         })
     });
-    let hover = o.get("hover_event").or_else(|| o.get("hoverEvent"));
-    style.hover = hover.and_then(Value::as_object).and_then(|h| {
-        if h.get("action")?.as_str()? != "show_text" {
-            return None;
-        }
-        let value = h.get("value").or_else(|| h.get("contents"))?;
-        Some(TextHover::Text(Box::new(from_json(value))))
-    });
     if let Some(extra) = o.get("extra").and_then(Value::as_array) {
         text.children.extend(extra.iter().map(from_json));
     }
@@ -171,13 +162,14 @@ mod tests {
         assert_eq!(arguments.len(), 3);
         assert_eq!(arguments[1].style.color.as_deref(), Some("gray"));
         assert_eq!(arguments[2].style.click, Some(TextClick::RunCommand("/voicechat join 1234".into())));
-        assert!(matches!(arguments[2].style.hover, Some(TextHover::Text(_))));
+        // Hover text doesn't go across (see the module comment): the join button keeps its click.
+        assert_eq!(arguments[2].style.hover, None);
         // And back: what earshot_core::chat reads.
         let back = to_json(&text);
         assert_eq!(back["translate"], "message.voicechat.invite");
         assert_eq!(back["with"][0]["text"], "muhnip");
         assert_eq!(back["with"][2]["click_event"]["command"], "/voicechat join 1234");
-        assert_eq!(back["with"][2]["hover_event"]["value"]["translate"], "message.voicechat.accept_invite.hover");
+        assert!(back["with"][2].get("hover_event").is_none());
     }
 
     #[test]

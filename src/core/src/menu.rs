@@ -194,7 +194,7 @@ enum Id {
     Player(Uuid),
     Group(Uuid),
     Member(Uuid),
-    Text(Field),
+    Input(Field),
     Create,
     /// The new group's type: Normal, Open, Isolated in turn.
     Kind,
@@ -453,13 +453,13 @@ impl Menu {
             Page::CreateGroup => {
                 b.text("Group name", GREY);
                 b.row(vec![Widget::new(
-                    Id::Text(Field::NewName),
+                    Id::Input(Field::NewName),
                     Kind::Field { field: Field::NewName, placeholder: "", secret: false },
                     self.edit.name.clone(),
                 )]);
                 b.text("Password (optional)", GREY);
                 b.row(vec![Widget::new(
-                    Id::Text(Field::NewPassword),
+                    Id::Input(Field::NewPassword),
                     Kind::Field { field: Field::NewPassword, placeholder: "", secret: true },
                     self.edit.password.clone(),
                 )]);
@@ -470,7 +470,7 @@ impl Menu {
             Page::Password(_) => {
                 b.text("Password", GREY);
                 b.row(vec![Widget::new(
-                    Id::Text(Field::JoinPassword),
+                    Id::Input(Field::JoinPassword),
                     Kind::Field { field: Field::JoinPassword, placeholder: "", secret: true },
                     self.edit.join_password.clone(),
                 )]);
@@ -504,14 +504,14 @@ impl Menu {
         let mut out = vec![
             Draw::Fill { rect: p, argb: BG },
             Draw::Fill { rect: [p[0], p[1], p[2], TITLE_H], argb: TITLE_BG },
-            Draw::Text {
+            Draw::Label {
                 text: l.title.clone(),
                 at: [p[0] + ((p[2] - text_width(&l.title)) / 2.0).max(4.0), p[1] + (TITLE_H - TEXT_H) / 2.0],
                 rgb: TITLE,
             },
         ];
         for (text, at, rgb) in &l.texts {
-            out.push(Draw::Text { text: fit(text, p[2] - 2.0 * PAD, text_width), at: *at, rgb: *rgb });
+            out.push(Draw::Label { text: fit(text, p[2] - 2.0 * PAD, text_width), at: *at, rgb: *rgb });
         }
         for w in &l.widgets {
             let hover = inside(w.rect, mouse) || self.dragging.as_ref() == Some(&w.id);
@@ -534,7 +534,7 @@ impl Menu {
                         text_x = w.rect[0] + 3.0 + 12.0 + 5.0;
                     }
                     let text = fit(&w.label, w.rect[0] + w.rect[2] - text_x - 4.0, text_width);
-                    out.push(Draw::Text { text, at: [text_x, w.rect[1] + (ROW_H - TEXT_H) / 2.0], rgb: if w.on { GREEN_TEXT } else { WHITE } });
+                    out.push(Draw::Label { text, at: [text_x, w.rect[1] + (ROW_H - TEXT_H) / 2.0], rgb: if w.on { GREEN_TEXT } else { WHITE } });
                     continue;
                 }
                 Kind::Button => {
@@ -633,7 +633,7 @@ impl Menu {
                 self.dragging = Some(w.id.clone());
                 slider_action(&w.id, slider_value(w.rect, min, max, p[0]))
             }
-            Id::Member(_) | Id::Text(_) => None,
+            Id::Member(_) | Id::Input(_) => None,
         }
     }
 
@@ -768,7 +768,7 @@ fn push_label(out: &mut Vec<Draw>, w: &Widget, text_width: &dyn Fn(&str) -> f32)
     let label = fit(&w.label, room, text_width);
     let tw = text_width(&label);
     let at = [w.rect[0] + (room + 8.0 - tw) / 2.0, w.rect[1] + (w.rect[3] - TEXT_H) / 2.0];
-    out.push(Draw::Text { text: label, at, rgb: WHITE });
+    out.push(Draw::Label { text: label, at, rgb: WHITE });
 }
 
 /// A text box's text: left-aligned, its end kept in view, asterisks for a secret, a caret when
@@ -784,7 +784,7 @@ fn push_field_text(
     let at = [w.rect[0] + 4.0, w.rect[1] + (w.rect[3] - TEXT_H) / 2.0];
     if w.label.is_empty() && !focused {
         if !placeholder.is_empty() {
-            out.push(Draw::Text { text: placeholder.into(), at, rgb: 0x777777 });
+            out.push(Draw::Label { text: placeholder.into(), at, rgb: 0x777777 });
         }
         return;
     }
@@ -794,7 +794,7 @@ fn push_field_text(
     while text_width(&text) > max && !text.is_empty() {
         text.remove(0);
     }
-    out.push(Draw::Text { text, at, rgb: WHITE });
+    out.push(Draw::Label { text, at, rgb: WHITE });
 }
 
 /// A player's coloured square with their initial (group members): 12 x 12 at `at`.
@@ -806,7 +806,7 @@ fn avatar(id: Uuid, name: &str, at: [f32; 2], text_width: &dyn Fn(&str) -> f32) 
     let tw = text_width(&initial);
     vec![
         Draw::Fill { rect: [at[0], at[1], 12.0, 12.0], argb: palette[h as usize % palette.len()] },
-        Draw::Text { text: initial, at: [at[0] + (12.0 - tw) / 2.0, at[1] + 2.0], rgb: WHITE },
+        Draw::Label { text: initial, at: [at[0] + (12.0 - tw) / 2.0, at[1] + 2.0], rgb: WHITE },
     ]
 }
 
@@ -887,7 +887,7 @@ mod tests {
     }
 
     fn texts(d: &[Draw]) -> Vec<String> {
-        d.iter().filter_map(|x| if let Draw::Text { text, .. } = x { Some(text.clone()) } else { None }).collect()
+        d.iter().filter_map(|x| if let Draw::Label { text, .. } = x { Some(text.clone()) } else { None }).collect()
     }
 
     #[test]
@@ -1101,7 +1101,7 @@ mod tests {
         assert!(!shown.iter().any(|t| t.contains("secret")));
         menu.key(MenuKey::Escape);
         assert!(!menu.typing());
-        click(&mut menu, &m, Id::Text(Field::NewName));
+        click(&mut menu, &m, Id::Input(Field::NewName));
         assert!(menu.typing());
         menu.press(&m, GUI, [1.0, 1.0]);
         assert!(!menu.typing(), "a click outside the boxes unfocuses");

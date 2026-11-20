@@ -47,7 +47,7 @@ pub struct Mixer {
     positions: HashMap<Uuid, [f64; 3]>,
     listener: Option<Listener>,
     falloff: Falloff,
-    jitter_cfg: jitter::Config,
+    jitter_cfg: jitter::JitterConfig,
     /// Master output volume (1.0 = unchanged).
     pub volume: f32,
     /// Per-player volume multipliers.
@@ -68,7 +68,7 @@ impl Mixer {
             positions: HashMap::new(),
             listener: None,
             falloff: Falloff::with_max(max_distance),
-            jitter_cfg: jitter::Config::default(),
+            jitter_cfg: jitter::JitterConfig::default(),
             volume: 1.0,
             player_volume: HashMap::new(),
             group_volume: 1.0,

@@ -8,7 +8,7 @@
 //! key. Inside is one message whose first byte is its type.
 
 use crate::crypto::{CryptoError, VoiceKey};
-use crate::wire::{DecodeError, Reader, Uuid, Writer};
+use crate::wire::{DecodeError, WireReader, Uuid, Writer};
 
 const MAGIC: u8 = 0xff;
 
@@ -107,7 +107,7 @@ impl Message {
     /// strict there threw away every such packet, so missing fields are errors and extra bytes
     /// are not.
     pub fn decode(plain: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(plain);
+        let mut r = WireReader::new(plain);
         let msg = match r.u8("type")? {
             0x01 => Message::Mic(MicFrame {
                 opus: r.bytes("opus")?.to_vec(),
@@ -192,7 +192,7 @@ pub fn seal_to_client(key: &VoiceKey, msg: &Message) -> Result<Vec<u8>, CryptoEr
 /// Reads a client -> server packet's header, so a server can find the sender's key.
 /// Returns the sender and the sealed bytes.
 pub fn split_from_client(packet: &[u8]) -> Result<(Uuid, &[u8]), DecodeError> {
-    let mut r = Reader::new(packet);
+    let mut r = WireReader::new(packet);
     if r.u8("magic")? != MAGIC {
         return Err(DecodeError::Invalid("magic"));
     }
@@ -209,7 +209,7 @@ pub fn open_from_server(key: &VoiceKey, packet: &[u8]) -> Result<Message, Packet
 
 /// Checks and decrypts a server -> client packet without decoding the message inside.
 pub fn open_raw_from_server(key: &VoiceKey, packet: &[u8]) -> Result<Vec<u8>, PacketError> {
-    let mut r = Reader::new(packet);
+    let mut r = WireReader::new(packet);
     if r.u8("magic")? != MAGIC {
         return Err(DecodeError::Invalid("magic").into());
     }

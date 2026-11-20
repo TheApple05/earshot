@@ -10,7 +10,7 @@
 pub enum Draw {
     Fill { rect: [f32; 4], argb: u32 },
     Quad { points: [[f32; 2]; 4], argb: u32 },
-    Text { text: String, at: [f32; 2], rgb: u32 },
+    Label { text: String, at: [f32; 2], rgb: u32 },
 }
 
 /// The state the HUD microphone icon shows.
@@ -137,7 +137,7 @@ pub fn group_panel(group: &str, members: &[PanelMember], width_of: &dyn Fn(&str)
 
     let mut out = vec![
         Draw::Fill { rect: [0.0, 0.0, size[0], size[1]], argb: 0x7800_0000 },
-        Draw::Text { text: title, at: [PANEL_PAD, PANEL_PAD], rgb: 0x7CE38B },
+        Draw::Label { text: title, at: [PANEL_PAD, PANEL_PAD], rgb: 0x7CE38B },
     ];
     let line_y = |i: usize| PANEL_PAD + (i + 1) as f32 * PANEL_ROW;
     for (i, m) in shown.iter().enumerate() {
@@ -146,10 +146,10 @@ pub fn group_panel(group: &str, members: &[PanelMember], width_of: &dyn Fn(&str)
             out.extend(small_speaker([PANEL_PAD, y], 0xFF55FF55));
         }
         let rgb = if m.talking { 0xFFFFFF } else { 0xAAAAAA };
-        out.push(Draw::Text { text: label(m), at: [PANEL_PAD + PANEL_ICON, y], rgb });
+        out.push(Draw::Label { text: label(m), at: [PANEL_PAD + PANEL_ICON, y], rgb });
     }
     if let Some(t) = more {
-        out.push(Draw::Text { text: t, at: [PANEL_PAD + PANEL_ICON, line_y(shown.len())], rgb: 0x888888 });
+        out.push(Draw::Label { text: t, at: [PANEL_PAD + PANEL_ICON, line_y(shown.len())], rgb: 0x888888 });
     }
     (size, out)
 }
@@ -177,7 +177,7 @@ pub fn translate(draws: Vec<Draw>, by: [f32; 2]) -> Vec<Draw> {
         .map(|d| match d {
             Draw::Fill { rect, argb } => Draw::Fill { rect: [rect[0] + by[0], rect[1] + by[1], rect[2], rect[3]], argb },
             Draw::Quad { points, argb } => Draw::Quad { points: points.map(p), argb },
-            Draw::Text { text, at, rgb } => Draw::Text { text, at: p(at), rgb },
+            Draw::Label { text, at, rgb } => Draw::Label { text, at: p(at), rgb },
         })
         .collect()
 }
@@ -268,7 +268,7 @@ mod tests {
         match d {
             Draw::Fill { rect, .. } => vec![[rect[0], rect[1]], [rect[0] + rect[2], rect[1] + rect[3]]],
             Draw::Quad { points, .. } => points.to_vec(),
-            Draw::Text { .. } => vec![],
+            Draw::Label { .. } => vec![],
         }
     }
 
@@ -335,7 +335,7 @@ mod tests {
     }
 
     fn texts(draws: &[Draw]) -> Vec<(String, u32)> {
-        draws.iter().filter_map(|d| if let Draw::Text { text, rgb, .. } = d { Some((text.clone(), *rgb)) } else { None }).collect()
+        draws.iter().filter_map(|d| if let Draw::Label { text, rgb, .. } = d { Some((text.clone(), *rgb)) } else { None }).collect()
     }
 
     #[test]
@@ -385,12 +385,12 @@ mod tests {
             vec![
                 Draw::Fill { rect: [1.0, 2.0, 3.0, 4.0], argb: 1 },
                 Draw::Quad { points: [[0.0, 0.0]; 4], argb: 2 },
-                Draw::Text { text: "a".into(), at: [5.0, 6.0], rgb: 3 },
+                Draw::Label { text: "a".into(), at: [5.0, 6.0], rgb: 3 },
             ],
             [10.0, 20.0],
         );
         assert_eq!(moved[0], Draw::Fill { rect: [11.0, 22.0, 3.0, 4.0], argb: 1 });
         assert_eq!(moved[1], Draw::Quad { points: [[10.0, 20.0]; 4], argb: 2 });
-        assert_eq!(moved[2], Draw::Text { text: "a".into(), at: [15.0, 26.0], rgb: 3 });
+        assert_eq!(moved[2], Draw::Label { text: "a".into(), at: [15.0, 26.0], rgb: 3 });
     }
 }

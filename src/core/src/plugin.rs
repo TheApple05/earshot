@@ -2,7 +2,7 @@
 //! (PROTOCOL.md, section 1). Each type knows its channel name and encodes or decodes the
 //! channel's data, not including the channel name itself.
 
-use crate::wire::{DecodeError, Reader, Uuid, Writer};
+use crate::wire::{DecodeError, WireReader, Uuid, Writer};
 
 /// SVC compatibility version these messages match (SVC 2.6.27, from the server log).
 pub const COMPATIBILITY_VERSION: i32 = 20;
@@ -70,7 +70,7 @@ impl RequestSecret {
     }
 
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let msg = Self { compatibility_version: r.i32("compatibility version")? };
         r.finish()?;
         Ok(msg)
@@ -139,7 +139,7 @@ impl Secret {
     }
 
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let msg = Self {
             secret: r.take(16, "secret")?.try_into().unwrap(),
             server_port: r.i32("server port")?,
@@ -205,7 +205,7 @@ impl UpdateState {
     }
 
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let msg = Self { disabled: r.bool("disabled")? };
         r.finish()?;
         Ok(msg)
@@ -232,7 +232,7 @@ impl PlayerState {
         }
     }
 
-    fn read(r: &mut Reader<'_>) -> Result<Self, DecodeError> {
+    fn read(r: &mut WireReader<'_>) -> Result<Self, DecodeError> {
         Ok(Self {
             disabled: r.bool("disabled")?,
             disconnected: r.bool("disconnected")?,
@@ -250,7 +250,7 @@ impl PlayerState {
     }
 
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let s = Self::read(&mut r)?;
         r.finish()?;
         Ok(s)
@@ -267,7 +267,7 @@ impl PlayerState {
     }
 
     pub fn decode_list(data: &[u8]) -> Result<Vec<Self>, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let n = r.i32("count")?;
         if n < 0 {
             return Err(DecodeError::Invalid("count"));
@@ -356,7 +356,7 @@ impl Group {
     }
 
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let (id, name, has_password) = (r.uuid("group id")?, r.string("group name")?, r.bool("has password")?);
         let flags: [u8; 2] = r.take(2, "group flags")?.try_into().unwrap();
         let kind = r.take(2, "group type")?;
@@ -386,7 +386,7 @@ impl CreateGroup {
 
     /// As a server reads it (Earshot's own voice server).
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let name = r.string("group name")?;
         let password = if r.bool("has password")? { Some(r.string("password")?) } else { None };
         let kind = r.take(2, "group type")?;
@@ -415,7 +415,7 @@ impl SetGroup {
 
     /// As a server reads it (Earshot's own voice server).
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let group = r.uuid("group id")?;
         let password = if r.bool("has password")? { Some(r.string("password")?) } else { None };
         r.finish()?;
@@ -433,7 +433,7 @@ pub struct JoinedGroup {
 
 impl JoinedGroup {
     pub fn decode(data: &[u8]) -> Result<Self, DecodeError> {
-        let mut r = Reader::new(data);
+        let mut r = WireReader::new(data);
         let group = if r.bool("in a group")? { Some(r.uuid("group")?) } else { None };
         Ok(Self { group, wrong_password: r.bool("wrong password")? })
     }
@@ -483,9 +483,9 @@ impl ServerMessage {
             STATE => PlayerState::decode(data).map(ServerMessage::State),
             STATES => PlayerState::decode_list(data).map(ServerMessage::States),
             ADD_GROUP => Group::decode(data).map(ServerMessage::AddGroup),
-            REMOVE_GROUP => Reader::new(data).uuid("group id").map(ServerMessage::RemoveGroup),
+            REMOVE_GROUP => WireReader::new(data).uuid("group id").map(ServerMessage::RemoveGroup),
             JOINED_GROUP => JoinedGroup::decode(data).map(ServerMessage::JoinedGroup),
-            REMOVE_STATE => Reader::new(data).uuid("player").map(ServerMessage::RemoveState),
+            REMOVE_STATE => WireReader::new(data).uuid("player").map(ServerMessage::RemoveState),
             other => Ok(ServerMessage::Other(other.to_string())),
         })
     }
