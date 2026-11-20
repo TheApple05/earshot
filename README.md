@@ -1,6 +1,6 @@
 <p align="center"><img src="icon.png" width="128" alt="Earshot icon"></p>
 
-# Earshot (Horizon native mod)
+# Earshot (Horizon mod)
 
 Proximity voice chat for [Horizon](https://playhorizon.dev/), the Rust rewrite of Minecraft: Java Edition 26.3.
 Talk to the players near you on servers that run **Simple Voice Chat**: with Java players using Simple Voice Chat,
@@ -13,12 +13,18 @@ and with other Horizon players using Earshot.
 ## Features
 
 - **Proximity voice** with 3D audio: voices come from where players stand and fade with distance.
-- **Push to talk** (Mouse 4) or **voice activation** with an adjustable threshold and a live mic level.
-- **Voice groups**: create one (with an optional password), join one with a click, leave it. Group members hear each
-  other at any distance, and a panel in the top-left corner lists them, lighting up whoever is talking.
+- **Push to talk** (Mouse 4), held or pressed once to switch on and off, or **voice activation** with an adjustable
+  threshold and a live mic level.
+- A **mic test** in the settings: hear yourself as the others would.
+- **Whisper** (Mouse 5, held): talk so only players close by hear you (the server sets how close).
+- **Voice groups**: create one (normal, open or isolated, with an optional password), join one with a click, leave it. Group members hear each
+  other at any distance, and a panel in the top-left corner lists them, lighting up whoever is talking. A **group volume**,
+  and a short **chime** when someone joins or leaves your group (Earshot's own sound; it can be turned off).
 - **Group invites** show in chat in Earshot's own words, with the server's join link still clickable.
 - **Noise reduction**, **per-player volume**, **mute** and **deafen**.
-- A **mic icon** on the HUD (idle, talking, muted, voice off) and a **speaker icon** beside talking players' name tags.
+- A **mic icon** on the HUD (idle, talking, muted, voice off), and beside other players' name tags a **speaker icon**:
+  green while they talk, red if they turned voice chat off, grey and crossed out if they aren't connected to voice
+  (no voice chat mod) on a server that runs it.
 - Opus audio and AES-128-GCM encryption, as the server expects.
 
 ## Keys
@@ -26,17 +32,19 @@ and with other Horizon players using Earshot.
 | Key | Does |
 |---|---|
 | **V** | Voice menu: Main, Settings, Players and Groups screens |
-| **Mouse 4** (side button) | Push to talk |
+| **Mouse 4** (side button) | Push to talk (hold, or press to switch: Settings in the voice menu) |
+| **Mouse 5** (other side button) | Whisper, while held |
 | **M** | Mute your microphone |
 | **N** | Deafen |
 
-Rebind them in Options > Mods > Earshot, which also has a **Debug info** switch for connection details.
+Rebind them in Options > Controls. Options > Mods > Earshot > **Config** has a **Voice chat** switch and a **Debug info**
+switch for connection details.
 
 ## Works with
 
 - Servers running **Simple Voice Chat 2.6.27** (compatibility version 20): Fabric and Paper (the Bukkit plugin).
-- Tested in game on Windows and Linux (PipeWire): Horizon with Java players on Simple Voice Chat, Horizon with
-  Horizon, and voice groups.
+- 2.0 tested in game on Windows with Simple Voice Chat servers. Earshot 1.x was also tested on Linux (PipeWire),
+  but 2.0 doesn't build on Linux yet (see Compatibility).
 - A server without Simple Voice Chat: Earshot stays quiet and sends nothing.
 
 ## Network use
@@ -45,44 +53,76 @@ When you join a server that runs Simple Voice Chat, Earshot asks it for a voice 
 It then sends and receives encrypted (AES-128-GCM) voice packets over **UDP** to the address the server names (default
 port 24454). It contacts nothing else.
 
+> **Not in this build:** hosting voice on a Horizon dedicated server is off on the current Nightly, until
+> [horizon-rust/horizon#18462](https://github.com/horizon-rust/horizon/issues/18462) is fixed. Joining servers is unaffected.
+
 **On a Horizon server** (a dedicated server, which has no game window), Earshot also runs a Simple Voice
 Chat-compatible **voice server**: once a player is connected, it listens for voice on **UDP port 24454 on every network
 interface** (`0.0.0.0`), and tells connected players about it over the game connection. Players' voice goes through it,
-encrypted with each player's own key. To turn it off, write `false` into the file `server_voice` in the server's
-`horizon-mods/.horizon-mod-data/earshot/` folder. In the same folder, `server_port` changes the port, and `voice_host`
-sets the address players connect to (empty: the address they joined). On a game you play yourself, with a window,
-Earshot never listens.
+encrypted with each player's own key. Its settings are `key=value` lines in `server.txt`, in the server's
+`horizon-mod-data/earshot/` folder: `server_voice=false` turns it off, `max_distance` and `whisper_distance` set how
+far voices and whispers carry (48 and half of it), `server_port` changes the port, and `voice_host` sets the address
+players connect to (empty: the address they joined). Only a dedicated server listens: in single
+player, in a world opened to LAN, or as a player joining a server, Earshot opens no port.
 
 ## Install
 
-In the Horizon launcher: Mods, find **Earshot**, Install, then **Build**. To try a local copy, put the `.hnmod` in your
-instance's `horizon-native-mods/` folder and Build. The first native build takes a while (the launcher downloads Rust).
+Made for Horizon **Nightly 2026-11-19 · f00125f**.
+It uses only the mod API, so the launcher also builds it on later Horizon builds where nothing it uses
+changed.
+
+From GitHub:
+
+1. Download `earshot-2.0.0.hmod` from the [latest release](https://github.com/selfmonoraque5/earshot/releases/latest).
+2. Put it in the `horizon-native-mods` folder of your game folder, not in `mods`. On Windows that is
+   `%APPDATA%\horizon\horizon-native-mods`.
+3. In the launcher, open the Mods page and click **Build** (the first build downloads the mod SDK and takes a few
+   minutes). After a build the launcher can look stuck for a while as it cleans its cache: let it finish.
+4. When it says **Up to date**, play.
+
+Once it is listed in the Horizon registry: Mods, find **Earshot**, Install.
+
+To build a local copy: `horizon-launcher native-build <this folder> --instance <instance> --trust-native-code`.
+
+Earshot 2.0 is made for Horizon's mod API. Its menu settings and player volumes are kept in `client.txt` in the
+game's `horizon-mod-data/earshot/` folder, so they start from the defaults again once: the 1.x settings files aren't
+read.
 
 ## Compatibility
 
-Earshot needs hook API **409** or later (`compatibility.json`). Last tested on Horizon Nightly `fdc87ae` with
-horizon-mixins `5a64af9`.
+A native mod on Horizon's mod API (`horizon-mod.toml`, `[native]`). Everything on the client goes through the mod
+API's hooks: the server's packets (`client_packet`), chat lines (`client_chat_received`), the HUD
+(`render_gui_post`), the name tag icons (`render_player_post`), the voice menu (a mod screen and the screen hooks),
+the keys and the settings. It patches no game function, so the launcher also builds it on later Horizon builds
+where nothing it uses changed.
 
-Not yet supported: whispering, group types other than the default, and a reply to a wrong group password. The voice
-server on a Horizon dedicated server (see Network use) is tested against Earshot's own client only.
+**Windows and macOS for now.** On Linux the launcher refuses it: Earshot's audio library (cpal) uses ALSA there,
+which the game links too, and a mod may not link a second copy. A Linux version is being worked on.
+
+The voice server for Horizon dedicated servers needs a hook the mod API doesn't have yet (a player's custom payloads
+on the server); it used a game patch that no longer compiles on the current Nightly
+([horizon-rust/horizon#18462](https://github.com/horizon-rust/horizon/issues/18462)), so it is off in this version.
+
+The voice server on a Horizon dedicated server (see Network use) does proximity voice, whispers and voice groups of
+all three types; so far it is tested against Earshot's own client only.
 
 ## How it works
 
 | Path | What |
 |---|---|
-| `mixins/earshot/horizon-mixin.toml` | The bundle: the game glue module, the core crate and the hooks |
-| `mixins/earshot/runtime.rs` | Game glue, added to the game as `crate::game::earshot` |
-| `mixins/earshot/helpers/` | One small function per hook |
-| `mixins/earshot/core` | `earshot-core`, everything that doesn't need the game: the wire format, AES-128-GCM, Opus, jitter buffer, mixing, positional audio, the menu and the icons. All unit tests are here. |
-| `mixins/earshot/core/src/opus` | opus-rs 0.1.41, vendored (see below) |
+| `horizon-mod.toml` | The manifest: id, version, the Horizon build it is made for, and the server's game patch |
+| `src/lib.rs` | The hooks |
+| `src/client.rs` | The voice client between hooks: keys, positions, the HUD, the name tag icons, the voice menu and its settings |
+| `src/server.rs` | The voice server on a dedicated server, and its settings |
+| `src/text_json.rs` | Chat lines between the mod API's text and the JSON `earshot_core::chat` rewrites |
+| `src/mixins/server_packet.rs` | The game patch: players' voice chat packets to the voice server |
+| `src/core` | `earshot-core`, everything that doesn't need the game: the wire format, AES-128-GCM, Opus, jitter buffer, mixing, positional audio, the voice server, the menu and the icons |
+| `src/core/src/opus` | opus-rs 0.1.41, vendored (see below) |
 | `PROTOCOL.md` | What Earshot knows of the voice protocol, and the capture each fact came from |
 
 ```
-cargo test -p earshot-core
+cargo test --workspace
 ```
-
-`runtime.rs` and the helpers only compile inside the game, so `cargo test` checks the core crate; the game build checks
-the rest.
 
 ## Dependencies and licenses
 
@@ -90,7 +130,7 @@ Shipped in the mod (Horizon only allows crates already in its own `Cargo.lock`):
 
 | Dependency | Version | License | How it's used |
 |---|---|---|---|
-| [opus-rs](https://github.com/restsend/opus-rs) | 0.1.41 | BSD-3-Clause (© restsend.com; © Xiph.Org, Skype Limited, Octasic, Jean-Marc Valin, Timothy B. Terriberry, CSIRO, Gregory Maxwell, Mark Borgerding, Erik de Castro Lopo, Mozilla, Amazon) | Vendored source in `mixins/earshot/core/src/opus/`, license in `mixins/earshot/core/COPYING-opus-rs`; changed only its `crate::` paths |
+| [opus-rs](https://github.com/restsend/opus-rs) | 0.1.41 | BSD-3-Clause (© restsend.com; © Xiph.Org, Skype Limited, Octasic, Jean-Marc Valin, Timothy B. Terriberry, CSIRO, Gregory Maxwell, Mark Borgerding, Erik de Castro Lopo, Mozilla, Amazon) | Vendored source in `src/core/src/opus/`, license in `COPYING-opus-rs`; changed only its `crate::` paths |
 | [aes](https://crates.io/crates/aes) | 0.8.4 | MIT OR Apache-2.0 | AES block cipher; GCM is our own code on top of it |
 | [getrandom](https://crates.io/crates/getrandom) | 0.3.4 | MIT OR Apache-2.0 | Random nonces |
 | [cpal](https://crates.io/crates/cpal) | 0.16.0 | Apache-2.0 | Microphone and speakers |
@@ -114,6 +154,7 @@ it under MIT or Apache-2.0. When Horizon builds the mod, it uses the versions in
 | aes | 0.8.4 | MIT OR Apache-2.0 |
 | alsa | 0.9.1 | Apache-2.0/MIT |
 | alsa-sys | 0.3.1 | MIT |
+| autocfg | 1.5.1 | Apache-2.0 OR MIT |
 | bitflags | 1.3.2 | MIT/Apache-2.0 |
 | bitflags | 2.13.2 | MIT OR Apache-2.0 |
 | bumpalo | 3.20.3 | MIT OR Apache-2.0 |
@@ -121,13 +162,14 @@ it under MIT or Apache-2.0. When Horizon builds the mod, it uses the versions in
 | cesu8 | 1.1.0 | Apache-2.0/MIT |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
 | cipher | 0.4.4 | MIT OR Apache-2.0 |
-| combine | 4.6.9 | MIT |
+| combine | 4.6.8 | MIT |
 | coreaudio-rs | 0.13.0 | MIT/Apache-2.0 |
 | cpal | 0.16.0 | Apache-2.0 |
 | cpufeatures | 0.2.17 | MIT OR Apache-2.0 |
 | crypto-common | 0.1.7 | MIT OR Apache-2.0 |
 | dasp_sample | 0.11.0 | MIT OR Apache-2.0 |
-| equivalent | 1.0.3 | Apache-2.0 OR MIT |
+| dispatch2 | 0.3.1 | Zlib OR Apache-2.0 OR MIT |
+| equivalent | 1.0.2 | Apache-2.0 OR MIT |
 | futures-core | 0.3.34 | MIT OR Apache-2.0 |
 | futures-task | 0.3.34 | MIT OR Apache-2.0 |
 | futures-util | 0.3.34 | MIT OR Apache-2.0 |
@@ -136,23 +178,23 @@ it under MIT or Apache-2.0. When Horizon builds the mod, it uses the versions in
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 |
 | indexmap | 2.14.2 | Apache-2.0 OR MIT |
 | inout | 0.1.4 | MIT OR Apache-2.0 |
-| itoa | 1.0.19 | MIT OR Apache-2.0 |
+| itoa | 1.0.18 | MIT OR Apache-2.0 |
 | jni | 0.21.1 | MIT/Apache-2.0 |
 | jni-sys | 0.3.1 | MIT OR Apache-2.0 |
 | jni-sys | 0.4.1 | MIT OR Apache-2.0 |
 | jni-sys-macros | 0.4.1 | MIT OR Apache-2.0 |
-| js-sys | 0.3.107 | MIT OR Apache-2.0 |
-| libc | 0.2.191 | MIT OR Apache-2.0 |
-| log | 0.4.35 | MIT OR Apache-2.0 |
+| js-sys | 0.3.106 | MIT OR Apache-2.0 |
+| libc | 0.2.190 | MIT OR Apache-2.0 |
+| log | 0.4.34 | MIT OR Apache-2.0 |
 | mach2 | 0.4.3 | BSD-2-Clause OR MIT OR Apache-2.0 |
 | memchr | 2.8.3 | Unlicense OR MIT |
 | ndk | 0.9.0 | MIT OR Apache-2.0 |
 | ndk-context | 0.1.1 | MIT OR Apache-2.0 |
 | ndk-sys | 0.6.0+11769913 | MIT OR Apache-2.0 |
-| num_enum | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 |
-| num_enum_derive | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 |
 | num-derive | 0.4.2 | MIT OR Apache-2.0 |
 | num-traits | 0.2.19 | MIT OR Apache-2.0 |
+| num_enum | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 |
+| num_enum_derive | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 |
 | objc2 | 0.6.5 | MIT |
 | objc2-audio-toolbox | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | objc2-core-audio | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
@@ -160,35 +202,47 @@ it under MIT or Apache-2.0. When Horizon builds the mod, it uses the versions in
 | objc2-core-foundation | 0.3.2 | Zlib OR Apache-2.0 OR MIT |
 | objc2-encode | 4.1.0 | MIT |
 | objc2-foundation | 0.3.2 | MIT |
+| once_cell | 1.21.4 | MIT OR Apache-2.0 |
 | pin-project-lite | 0.2.17 | Apache-2.0 OR MIT |
-| proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
+| pkg-config | 0.3.34 | MIT OR Apache-2.0 |
 | proc-macro-crate | 3.5.0 | MIT OR Apache-2.0 |
+| proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
 | quote | 1.0.47 | MIT OR Apache-2.0 |
 | r-efi | 5.3.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later |
 | rustversion | 1.0.23 | MIT OR Apache-2.0 |
+| same-file | 1.0.6 | Unlicense/MIT |
 | serde | 1.0.229 | MIT OR Apache-2.0 |
 | serde_core | 1.0.229 | MIT OR Apache-2.0 |
 | serde_derive | 1.0.229 | MIT OR Apache-2.0 |
-| serde_json | 1.0.154 | MIT OR Apache-2.0 |
+| serde_json | 1.0.151 | MIT OR Apache-2.0 |
 | slab | 0.4.12 | MIT |
 | syn | 2.0.119 | MIT OR Apache-2.0 |
-| syn | 3.0.9 | MIT OR Apache-2.0 |
+| syn | 3.0.6 | MIT OR Apache-2.0 |
 | thiserror | 1.0.69 | MIT OR Apache-2.0 |
 | thiserror-impl | 1.0.69 | MIT OR Apache-2.0 |
-| tokio | 1.54.1 | MIT |
-| toml_datetime | 1.1.2+spec-1.1.0 | MIT OR Apache-2.0 |
-| toml_edit | 0.25.18+spec-1.1.0 | MIT OR Apache-2.0 |
-| toml_parser | 1.1.5+spec-1.1.0 | MIT OR Apache-2.0 |
+| tokio | 1.53.3 | MIT |
+| toml_datetime | 1.1.1+spec-1.1.0 | MIT OR Apache-2.0 |
+| toml_edit | 0.25.15+spec-1.1.0 | MIT OR Apache-2.0 |
+| toml_parser | 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 |
 | typenum | 1.20.1 | MIT OR Apache-2.0 |
-| unicode-ident | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 |
-| wasip2 | 1.0.1+wasi-0.2.4 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
-| wasm-bindgen | 0.2.130 | MIT OR Apache-2.0 |
-| wasm-bindgen-futures | 0.4.80 | MIT OR Apache-2.0 |
-| wasm-bindgen-macro | 0.2.130 | MIT OR Apache-2.0 |
-| wasm-bindgen-macro-support | 0.2.130 | MIT OR Apache-2.0 |
-| wasm-bindgen-shared | 0.2.130 | MIT OR Apache-2.0 |
-| web-sys | 0.3.107 | MIT OR Apache-2.0 |
+| unicode-ident | 1.0.26 | (MIT OR Apache-2.0) AND Unicode-3.0 |
+| version_check | 0.9.5 | MIT/Apache-2.0 |
+| walkdir | 2.5.0 | Unlicense/MIT |
+| wasip2 | 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
+| wasm-bindgen | 0.2.129 | MIT OR Apache-2.0 |
+| wasm-bindgen-futures | 0.4.79 | MIT OR Apache-2.0 |
+| wasm-bindgen-macro | 0.2.129 | MIT OR Apache-2.0 |
+| wasm-bindgen-macro-support | 0.2.129 | MIT OR Apache-2.0 |
+| wasm-bindgen-shared | 0.2.129 | MIT OR Apache-2.0 |
+| web-sys | 0.3.106 | MIT OR Apache-2.0 |
+| winapi-util | 0.1.11 | Unlicense OR MIT |
 | windows | 0.54.0 | MIT OR Apache-2.0 |
+| windows-core | 0.54.0 | MIT OR Apache-2.0 |
+| windows-result | 0.1.2 | MIT OR Apache-2.0 |
+| windows-sys | 0.45.0 | MIT OR Apache-2.0 |
+| windows-sys | 0.59.0 | MIT OR Apache-2.0 |
+| windows-targets | 0.42.2 | MIT OR Apache-2.0 |
+| windows-targets | 0.52.6 | MIT OR Apache-2.0 |
 | windows_aarch64_gnullvm | 0.42.2 | MIT OR Apache-2.0 |
 | windows_aarch64_gnullvm | 0.52.6 | MIT OR Apache-2.0 |
 | windows_aarch64_msvc | 0.42.2 | MIT OR Apache-2.0 |
@@ -204,15 +258,10 @@ it under MIT or Apache-2.0. When Horizon builds the mod, it uses the versions in
 | windows_x86_64_gnullvm | 0.52.6 | MIT OR Apache-2.0 |
 | windows_x86_64_msvc | 0.42.2 | MIT OR Apache-2.0 |
 | windows_x86_64_msvc | 0.52.6 | MIT OR Apache-2.0 |
-| windows-core | 0.54.0 | MIT OR Apache-2.0 |
-| windows-result | 0.1.2 | MIT OR Apache-2.0 |
-| windows-sys | 0.45.0 | MIT OR Apache-2.0 |
-| windows-sys | 0.61.2 | MIT OR Apache-2.0 |
-| windows-targets | 0.42.2 | MIT OR Apache-2.0 |
-| windows-targets | 0.52.6 | MIT OR Apache-2.0 |
-| winnow | 1.0.5 | MIT |
-| wit-bindgen | 0.46.0 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
+| winnow | 1.0.4 | MIT |
+| wit-bindgen | 0.57.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | zmij | 1.0.23 | MIT |
+
 </details>
 
 ## License

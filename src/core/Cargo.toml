@@ -1,0 +1,16 @@
+[package]
+name = "earshot-core"
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT AND BSD-3-Clause"   # our code MIT; src/opus/ is opus-rs (BSD-3-Clause, see COPYING-opus-rs)
+description = "Earshot's game-independent core: SVC-compatible wire format, encryption, Opus, jitter buffer, spatial audio"
+publish = false
+
+# A local crate of the mod: its registry dependencies are pinned in the mod's Cargo.lock
+# (`horizon-launcher native-lock .`). The mod API refuses features, so audio, std and heap are always on.
+[dependencies]
+aes = "0.8"        # MIT OR Apache-2.0: the AES block cipher; GCM is built on it in src/crypto.rs
+cpal = "0.16"      # Apache-2.0: microphone and speakers
+getrandom = "0.3"  # MIT OR Apache-2.0: random nonces
+serde_json = "1"   # MIT OR Apache-2.0: reading chat lines' JSON (src/chat.rs)

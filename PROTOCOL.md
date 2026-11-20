@@ -119,12 +119,12 @@ Rule: **missing fields are errors; extra bytes are ignored.**
 ### Plugin messages
 | Channel | Dir | Data | Status |
 |---|---|---|---|
-| `create_group` | c2s | name (string), has-password (bool), [password (string)], then `00 00` | confirmed (2 groups; hypothesis: the 2 bytes are the group type) |
+| `create_group` | c2s | name (string), has-password (bool), [password (string)], then `00 00` | confirmed (2 groups); the 2 bytes are the group type (section 6) |
 | `set_group` | c2s | group id (16), has-password (bool), [password (string)] | **confirmed** at 518.57 s (it had been a hypothesis) |
 | `leave_group` | c2s | nothing | confirmed |
-| `add_group` | s2c, to everyone | group id (16), name, has-password (bool), 4 bytes, zero every time | confirmed |
+| `add_group` | s2c, to everyone | group id (16), name, has-password (bool), 4 bytes, zero every time | confirmed; the last 2 bytes are the group type (section 6) |
 | `remove_group` | s2c, to everyone | group id (16) | confirmed (when its last member left) |
-| `joined_group` | s2c, to the joiner | in-a-group (bool), [group id], then a bool, 0 every time | confirmed layout; hypothesis: the bool is "wrong password" (no wrong attempt was captured) |
+| `joined_group` | s2c, to the joiner | in-a-group (bool), [group id], then a bool, 0 every time | confirmed layout; the bool is "wrong password" (section 6) |
 | `remove_state` | s2c | player UUID (16) | confirmed (a player left the server) |
 
 The player state entry's last field is "in a group" (bool), **followed by the group's id when true** (the 47-byte states at 191.70 s).
@@ -146,8 +146,43 @@ A system chat line, `{"translate": "message.voicechat.invite", "with": [A, B, C]
 
 Only Simple Voice Chat's own client has text for the three `message.voicechat.` keys; Earshot words them itself (`core/src/chat.rs`).
 
-## 5. Still unknown
-- Group types (the 2 bytes in `create_group`, 4 in `add_group`), and wrong-password replies.
-- The flag bytes at the end of c2s 0x01 and s2c 0x02 (whisper? both always 0 so far).
+## 6. Whisper, group types, wrong password, *confirmed* (capture 07, 2026-11-12: NullPort404 and AIOMarcus, both on Java SVC 2.6.27)
+
+Both players in push to talk, SVC's whisper key bound. Times are from the capture's start.
+
+### Whisper
+- The **last byte of c2s 0x01** is the whisper flag: **1** while the whisper key is held, 0 otherwise.
+  NullPort404 whispering after `mark whisper a` (502.29 s): 228 frames with 1 (502.94–507.49 s); talking after
+  `mark talk a`: 176 frames with 0 (519.41–522.91 s). Again after `mark whisper far` (232 frames with 1) and
+  `mark talk far` (229 with 0).
+- In **s2c 0x02** the whisper keeps its flag, and the **distance** field carries the whisper's range:
+  AIOMarcus's whisper reached NullPort404 as 225 frames with distance **24.0** and flag **1** (573.19–577.67 s), where
+  normal talk comes with 48.0 and 0. So a whisper is heard over half the voice distance (this server's defaults).
+- A few frames with flag 0 follow each whisper (6 after letting go, 507.50–507.60 s): the end of the talk spurt.
+- Not readable in this capture: whether a whisper reached AIOMarcus about 30 blocks away (its first connection's
+  key isn't followed by `capture-inspect` after it reconnected). By the range above, it shouldn't.
+
+### Group types
+- `create_group` ends with the group's **type, a big-endian u16**: `00 00` normal (`t1`, 777.38 s), `00 01` open
+  (`t2`, 888.90 s), `00 02` isolated (`t3`, 954.69 s); `pw` with password `1234` (1014.88 s) was normal.
+- `add_group`'s four trailing bytes are **two zero bytes, then the same u16 type**: `0000 0000`, `0000 0001`,
+  `0000 0002`. The first two were zero in every capture.
+- Who heard whom, with NullPort404 in the group and AIOMarcus nearby outside it (all decided by the server):
+
+| Type | Member talks, outsider nearby | Outsider talks, member nearby |
+|---|---|---|
+| Normal | not readable (key, as above) | heard: 0x02 to NullPort404 (790.64 s) |
+| Open | heard: 0x02 to AIOMarcus (892.46 s) | heard: 0x02 to NullPort404 (899.99 s) |
+| Isolated | **not** heard: nothing to AIOMarcus (958–964 s) | **not** heard: nothing to NullPort404 (966–970 s) |
+
+  Inside the group, members heard each other as 0x03 in every type (812.42 s, 916.62 s, 981.40 s).
+
+### Wrong password
+- `set_group` with a wrong password (`9999` at 1025.96 and 1044.37 s, `1221` at 1056.99 s) is answered with
+  `joined_group` `00 01`: not in a group, **wrong password**. SVC's own screen then says the password is incorrect.
+  With `1234` (1063.22 s): `01`, the group's id, `00`.
+
+## 7. Still unknown
+- The two zero bytes before the type in `add_group`.
 - Whether 0x05 must be repeated until a 0x06 arrives. AIOMarcus sent 0x05 twice in capture 05 and got 0x06 twice.
 - How the nonce is chosen (it looks random; a receiver doesn't need to know).

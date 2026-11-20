@@ -1,0 +1,9 @@
+{
+  "earshot.key.menu": "Voice menu",
+  "earshot.key.push_to_talk": "Push to talk",
+  "earshot.key.whisper": "Whisper",
+  "earshot.key.mute": "Mute microphone",
+  "earshot.key.deafen": "Deafen",
+  "earshot.option.voice_chat": "Voice chat",
+  "earshot.option.debug": "Debug info"
+}
