@@ -1,6 +1,6 @@
 id = "earshot"
 name = "Earshot"
-version = "2.0.1"
+version = "2.0.2"
 description = "Proximity voice chat that works with Simple Voice Chat servers: 3D audio, push to talk, whisper, voice groups. An independent project, not affiliated with Simple Voice Chat."
 authors = ["selfmonoraque5"]
 license = "MIT AND BSD-3-Clause"
@@ -14,9 +14,9 @@ capabilities = ["registries"]
 
 [native]
 game = "26.3"
-horizon = "f00125f61f794aaa3d4e950d301f353b35b6ee3d"
+horizon = "5ef7734fdd854add5efd6817178be3c988d8d050"
 mixins = "e59da9094f0c2fdda6c627fe9eff22dec6a906f0"
 
-# No game patch on this build: Horizon's gameplay split leaves the voice server's
-# patch target uncompilable (horizon-rust/horizon#18462). Joining servers needs none; hosting
-# voice on a Horizon dedicated server is off until that is fixed.
+# No game patch in this version: the voice server's patch broke with Horizon's gameplay split
+# (horizon-rust/horizon#18462, since fixed in the launcher). Joining servers needs none; hosting
+# voice on a Horizon dedicated server is off until that patch is tested again.

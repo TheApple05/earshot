@@ -53,8 +53,8 @@ When you join a server that runs Simple Voice Chat, Earshot asks it for a voice 
 It then sends and receives encrypted (AES-128-GCM) voice packets over **UDP** to the address the server names (default
 port 24454). It contacts nothing else.
 
-> **Not in this build:** hosting voice on a Horizon dedicated server is off on the current Nightly, until
-> [horizon-rust/horizon#18462](https://github.com/horizon-rust/horizon/issues/18462) is fixed. Joining servers is unaffected.
+> **Not in this version:** hosting voice on a Horizon dedicated server is off; it comes back in a later version.
+> Joining servers is unaffected.
 
 **On a Horizon server** (a dedicated server, which has no game window), Earshot also runs a Simple Voice
 Chat-compatible **voice server**: once a player is connected, it listens for voice on **UDP port 24454 on every network
@@ -67,13 +67,13 @@ player, in a world opened to LAN, or as a player joining a server, Earshot opens
 
 ## Install
 
-Made for Horizon **Nightly 2026-11-19 · f00125f**.
+Made for Horizon **Nightly 2026-11-19 · 5ef7734**.
 It uses only the mod API, so the launcher also builds it on later Horizon builds where nothing it uses
 changed.
 
 From GitHub:
 
-1. Download `earshot-2.0.1.hmod` from the [latest release](https://github.com/selfmonoraque5/earshot/releases/latest).
+1. Download `earshot-2.0.2.hmod` from the [latest release](https://github.com/selfmonoraque5/earshot/releases/latest).
 2. Put it in the `horizon-native-mods` folder of your game folder, not in `mods`. On Windows that is
    `%APPDATA%\horizon\horizon-native-mods`.
 3. In the launcher, open the Mods page and click **Build** (the first build downloads the mod SDK and takes a few
@@ -100,8 +100,9 @@ where nothing it uses changed.
 which the game links too, and a mod may not link a second copy. A Linux version is being worked on.
 
 The voice server for Horizon dedicated servers needs a hook the mod API doesn't have yet (a player's custom payloads
-on the server); it used a game patch that no longer compiles on the current Nightly
-([horizon-rust/horizon#18462](https://github.com/horizon-rust/horizon/issues/18462)), so it is off in this version.
+on the server); it used a game patch that stopped compiling after Horizon's gameplay split
+([horizon-rust/horizon#18462](https://github.com/horizon-rust/horizon/issues/18462), since fixed in the launcher), so it
+is off in this version and comes back once that patch is tested again.
 
 The voice server on a Horizon dedicated server (see Network use) does proximity voice, whispers and voice groups of
 all three types; so far it is tested against Earshot's own client only.
