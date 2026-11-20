@@ -446,10 +446,23 @@ fn chime_on_group_change(inner: &mut Inner) {
     }
 }
 
+/// How long dropping a client waits for its worker to see `stop` (it checks every few ms).
+const STOP_WAIT: Duration = Duration::from_millis(500);
+
 impl Drop for VoiceClient {
     fn drop(&mut self) {
         self.shared.stop.store(true, Ordering::Relaxed);
-        if let Some(w) = self.worker.take() {
+        let Some(w) = self.worker.take() else {
+            return;
+        };
+        // At process exit Windows ends the worker before thread-local destructors run, and
+        // joining a thread the OS ended panics ("threads should not terminate unexpectedly").
+        // Join only a worker that finished; one that never does is left to the exiting process.
+        let deadline = Instant::now() + STOP_WAIT;
+        while !w.is_finished() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(2));
+        }
+        if w.is_finished() {
             let _ = w.join();
         }
     }
@@ -807,6 +820,30 @@ mod tests {
             assert!(Instant::now() < deadline, "timed out waiting for {what}");
             std::thread::sleep(Duration::from_millis(5));
         }
+    }
+
+    #[test]
+    fn dropping_a_client_stops_its_worker_promptly() {
+        let client = VoiceClient::new(Settings { use_audio_devices: false, ..Settings::default() });
+        let started = Instant::now();
+        drop(client);
+        assert!(started.elapsed() < STOP_WAIT, "the worker saw `stop` and was joined");
+    }
+
+    #[test]
+    fn dropping_a_client_whose_worker_never_ends_does_not_hang_or_panic() {
+        // As at process exit, where the OS has ended the worker: a handle that never finishes.
+        let mut client = VoiceClient::new(Settings { use_audio_devices: false, ..Settings::default() });
+        let (_keep, wait) = std::sync::mpsc::channel::<()>();
+        let stuck = std::thread::spawn(move || {
+            let _ = wait.recv();
+        });
+        let real = client.worker.replace(stuck);
+        let started = Instant::now();
+        drop(client);
+        let took = started.elapsed();
+        assert!(took >= STOP_WAIT && took < STOP_WAIT * 4, "waited {took:?}");
+        let _ = real.map(JoinHandle::join);
     }
 
     #[test]
