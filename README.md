@@ -52,11 +52,14 @@ switch for connection details.
 When you join a server that runs Simple Voice Chat, Earshot asks it for a voice key over the game connection.
 It uses **UDP** for encrypted (AES-128-GCM) voice packets. The game server can name a separate voice host and port.
 
-Earshot opens the microphone when the game server supplies voice connection details or when you start the mic test.
-Mute and the **Voice chat** switch stop microphone transmission. The input device can stay open for local audio
-processing and the level meter. Earshot sends microphone audio only over a connected voice session when voice chat
-is enabled, the mic is unmuted, and push-to-talk, whisper, or voice activation is active. The mic test plays back
-locally and does not start transmission on its own.
+Earshot opens the microphone when voice chat is enabled, the mic is unmuted, and either the game server supplies
+voice connection details or you start the mic test. Muting closes the microphone while keeping playback available
+in a voice session. Switching **Voice chat** off closes both audio streams. The mic test is unavailable while muted
+or switched off.
+
+Earshot sends microphone audio only over a connected voice session when voice chat is enabled, the mic is unmuted,
+and push-to-talk, whisper, or voice activation is active. The mic test plays back locally and does not start
+transmission on its own.
 
 **Earshot 2.0.3 does not host voice on Horizon dedicated servers.** It can still join servers running Simple Voice Chat.
 Earshot 1.x could host voice on a dedicated server and listened on UDP port 24454 on all interfaces by default.
