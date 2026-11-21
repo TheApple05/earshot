@@ -376,8 +376,11 @@ impl Menu {
                 if m.push_to_talk {
                     row.push(Widget::new(Id::PttStyle, Kind::Button, if m.ptt_toggle { "Press to switch" } else { "Hold to talk" }));
                 }
-                let mic_test = if m.muted || m.disabled {
-                    "Mic test unavailable"
+                // Short enough for the half-width button.
+                let mic_test = if m.disabled {
+                    "Mic test: off"
+                } else if m.muted {
+                    "Mic test: muted"
                 } else if m.mic_test {
                     "Mic test: on"
                 } else {
