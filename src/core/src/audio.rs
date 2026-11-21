@@ -49,10 +49,14 @@ pub(crate) struct AudioIo {
 }
 
 impl AudioIo {
+    /// `open` builds a paused stream; `start` plays it only if `D` is still wanted, checked
+    /// under the same lock that muting and switching off take, so a stream never starts after
+    /// the player has muted or switched voice chat off.
     pub(crate) fn start<D: PartialEq>(
         name: &str,
         wanted: impl Fn() -> Option<D> + Send + 'static,
         open: impl Fn(&cpal::Host, &D) -> Result<(String, cpal::Stream), String> + Send + 'static,
+        start: impl Fn(&D, &cpal::Stream) -> Result<bool, String> + Send + 'static,
         status: impl Fn(String) + Send + 'static,
     ) -> Self {
         let stop = Arc::new(AtomicBool::new(false));
@@ -69,18 +73,19 @@ impl AudioIo {
                         current = next;
                         status("closed".into());
                         if let Some(device) = &current {
+                            // Built paused: the player may mute, disconnect or change devices
+                            // while it opens.
                             let opened = open(&cpal::default_host(), device);
-                            // The player may have muted, disconnected or changed devices while
-                            // opening the stream. Drop that stream before handling the new request.
-                            if stopping.load(Ordering::Relaxed) || wanted() != current {
-                                current = None;
-                                continue;
+                            if stopping.load(Ordering::Relaxed) {
+                                break;
                             }
-                            match opened {
-                                Ok((name, handle)) => {
+                            match opened.and_then(|(name, handle)| Ok((start(device, &handle)?, name, handle))) {
+                                Ok((true, name, handle)) => {
                                     stream = Some(handle);
                                     status(name);
                                 }
+                                // No longer wanted: dropped unstarted; the next round sees the new request.
+                                Ok((false, ..)) => current = None,
                                 Err(e) => status(format!("none ({e})")),
                             }
                         }
@@ -91,6 +96,19 @@ impl AudioIo {
             .ok();
         Self { stop, thread }
     }
+}
+
+/// Plays a built stream for `device` only while it is still the one `wanted` (read under the
+/// caller's lock): false, and `play` is never called, once the player has muted or switched off.
+pub(crate) fn start_if_wanted<D: PartialEq>(
+    device: &D,
+    wanted: Option<D>,
+    play: impl FnOnce() -> Result<(), String>,
+) -> Result<bool, String> {
+    if wanted.as_ref() != Some(device) {
+        return Ok(false);
+    }
+    play().map(|()| true)
 }
 
 impl Drop for AudioIo {
@@ -139,7 +157,8 @@ fn try_open_input(host: &cpal::Host, name: Option<&str>, capture: CaptureQueue) 
         SampleFormat::I32 => build_input::<i32>(&device, &config, capture),
         other => return Err(format!("unsupported microphone sample format {other:?}")),
     }?;
-    stream.play().map_err(|e| e.to_string())?;
+    // Left paused: `AudioIo`'s `start` plays it.
+    let _ = stream.pause();
     Ok((device.name().unwrap_or_else(|_| "microphone".into()), stream))
 }
 
@@ -192,7 +211,7 @@ fn try_open_output(host: &cpal::Host, name: Option<&str>, playback: PlaybackQueu
         SampleFormat::I32 => build_output::<i32>(&device, &config, playback),
         other => return Err(format!("unsupported speaker sample format {other:?}")),
     }?;
-    stream.play().map_err(|e| e.to_string())?;
+    let _ = stream.pause();
     Ok((device.name().unwrap_or_else(|_| "speakers".into()), stream))
 }
 

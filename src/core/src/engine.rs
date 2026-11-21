@@ -167,6 +167,11 @@ impl Inner {
         (input, output)
     }
 
+    /// The microphone this client wants open now, with the queue it fills.
+    fn wanted_input(&self) -> Option<InputDevice> {
+        self.audio_devices().0.map(|name| InputDevice { name, queue: self.capture.clone() })
+    }
+
     fn reset_capture(&mut self) {
         // The old stream can still have a callback in flight. Give the next stream a
         // fresh queue so muted or disconnected audio cannot leak into a later session.
@@ -612,24 +617,29 @@ impl PartialEq for InputDevice {
 }
 
 fn start_audio(shared: &Arc<Shared>, playback: PlaybackQueue) -> (AudioIo, AudioIo) {
-    let input = shared.clone();
-    let output = shared.clone();
-    let input_status = shared.clone();
-    let output_status = shared.clone();
+    let (input, input_gate, input_status) = (shared.clone(), shared.clone(), shared.clone());
+    let (output, output_gate, output_status) = (shared.clone(), shared.clone(), shared.clone());
+    let play = |stream: &cpal::Stream| cpal::traits::StreamTrait::play(stream).map_err(|e| e.to_string());
     (
         AudioIo::start(
             "earshot-input",
-            move || {
-                let inner = input.lock();
-                inner.audio_devices().0.map(|name| InputDevice { name, queue: inner.capture.clone() })
-            },
+            move || input.lock().wanted_input(),
             |host, device| audio::open_input(host, device.name.as_deref(), device.queue.clone()),
+            // Checked and started under the lock `set_muted` and `set_disabled` take.
+            move |device, stream| {
+                let inner = input_gate.lock();
+                audio::start_if_wanted(device, inner.wanted_input(), || play(stream))
+            },
             move |status| input_status.lock().input_device = status,
         ),
         AudioIo::start(
             "earshot-output",
             move || output.lock().audio_devices().1,
             move |host, device| audio::open_output(host, device.as_deref(), playback.clone()),
+            move |device, stream| {
+                let inner = output_gate.lock();
+                audio::start_if_wanted(device, inner.audio_devices().1, || play(stream))
+            },
             move |status| output_status.lock().output_device = status,
         ),
     )
@@ -847,6 +857,33 @@ mod tests {
         inner.session.disabled = true;
         assert_eq!(inner.audio_devices(), (None, None));
         inner.settings.use_audio_devices = false;
+    }
+
+    #[test]
+    fn a_microphone_opened_as_the_player_mutes_is_never_started() {
+        let client = VoiceClient::new(Settings { use_audio_devices: false, ..Settings::default() });
+        let mut inner = client.shared.lock();
+        inner.target = Some(("127.0.0.1".into(), 1));
+        inner.settings.use_audio_devices = true;
+        // The worker read this request, then opened the device while the player muted.
+        let opening = inner.wanted_input().unwrap();
+        drop(inner);
+        client.set_muted(true);
+        let mut played = false;
+        let started = audio::start_if_wanted(&opening, client.shared.lock().wanted_input(), || {
+            played = true;
+            Ok(())
+        });
+        assert_eq!(started, Ok(false));
+        assert!(!played, "a muted microphone's stream is never played");
+        // Unmuted again with a fresh queue: the stream opened for the old one isn't started either.
+        client.set_muted(false);
+        let mut inner = client.shared.lock();
+        assert_eq!(audio::start_if_wanted(&opening, inner.wanted_input(), || Ok(())), Ok(false));
+        let fresh = inner.wanted_input().unwrap();
+        assert_eq!(audio::start_if_wanted(&fresh, inner.wanted_input(), || Ok(())), Ok(true));
+        inner.settings.use_audio_devices = false;
+        inner.target = None;
     }
 
     #[test]
