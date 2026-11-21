@@ -10,6 +10,12 @@ and with other Horizon players using Earshot.
 > It contains no Simple Voice Chat code or assets. Its protocol support was worked out only from our own
 > network captures; see [PROTOCOL.md](PROTOCOL.md), which records where each fact came from.
 
+## Screenshots
+
+| Voice menu (V) | Settings | Voice groups |
+|---|---|---|
+| ![The voice menu: settings, groups, players, and mic, sound and voice switches](screenshots/voice-menu.png) | ![Settings: volumes, push to talk, mic test and level, noise reduction, devices](screenshots/settings.png) | ![Creating a voice group with a name, an optional password and a type](screenshots/create-group.png) |
+
 ## Features
 
 - **Proximity voice** with 3D audio: voices come from where players stand and fade with distance.
