@@ -41,8 +41,9 @@ pub mod udp;
 pub mod ui;
 pub mod wire;
 
-/// opus-rs 0.1.41 (BSD-3-Clause, restsend.com and the libopus authors), vendored unchanged
-/// apart from its `crate::` paths, because Horizon mod crates can't depend on crates outside
+/// opus-rs 0.1.41 (BSD-3-Clause, restsend.com and the libopus authors), vendored with two
+/// changes: its `crate::` paths, and its `OPUS_TRACE_PLC` debug trace (which wrote files) is
+/// removed from `celt/plc.rs`. Vendored because Horizon mod crates can't depend on crates outside
 /// Horizon's own lock file.
 #[allow(
     unexpected_cfgs,

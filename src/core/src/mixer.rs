@@ -24,6 +24,9 @@ const NO_FALLOFF: Falloff = Falloff { full_volume_distance: f64::INFINITY, max_d
 const TALKING_TICKS: u64 = 10;
 /// A speaker silent this long is dropped, freeing their decoder (10 s).
 const FORGET_TICKS: u64 = 500;
+/// At most this many players are decoded at once: frames from more senders
+/// (a server inventing speakers) are dropped instead of each getting a decoder.
+pub const MAX_SPEAKERS: usize = 64;
 /// Most local sound queued (200 ms): a mic test that runs ahead of the mix loses its oldest
 /// samples rather than lagging further and further behind.
 const LOCAL_LIMIT: usize = 10 * FRAME_SAMPLES;
@@ -120,6 +123,9 @@ impl Mixer {
 
     fn push_frame(&mut self, sender: Uuid, sequence: u64, opus: Vec<u8>, group: bool, range: Option<f64>) {
         let (cfg, tick) = (self.jitter_cfg, self.tick);
+        if self.speakers.len() >= MAX_SPEAKERS && !self.speakers.contains_key(&sender) {
+            return;
+        }
         let speaker = self.speakers.entry(sender).or_insert_with(|| Speaker {
             jitter: JitterBuffer::new(cfg),
             decoder: None,
@@ -251,6 +257,21 @@ mod tests {
             m.push(alice, seq as u64, p);
         }
         (m, alice)
+    }
+
+    #[test]
+    fn invented_speakers_past_the_cap_are_dropped() {
+        let mut m = Mixer::new(48.0);
+        let packet = tone_packets(1).remove(0);
+        for i in 0..MAX_SPEAKERS + 10 {
+            let mut id = [0u8; 16];
+            id[..8].copy_from_slice(&(i as u64).to_le_bytes());
+            m.push(Uuid(id), 0, packet.clone());
+        }
+        assert_eq!(m.speakers.len(), MAX_SPEAKERS);
+        // Someone already heard keeps being heard.
+        m.push(Uuid([0; 16]), 1, packet);
+        assert_eq!(m.speakers.len(), MAX_SPEAKERS);
     }
 
     #[test]

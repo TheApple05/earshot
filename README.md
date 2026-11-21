@@ -67,13 +67,13 @@ player, in a world opened to LAN, or as a player joining a server, Earshot opens
 
 ## Install
 
-Made for Horizon **Nightly 2026-11-19 · 5ef7734**.
+Made for Horizon **Nightly 2026-11-21 · f037744**.
 It uses only the mod API, so the launcher also builds it on later Horizon builds where nothing it uses
 changed.
 
 From GitHub:
 
-1. Download `earshot-2.0.3.hmod` from the [latest release](https://github.com/selfmonoraque5/earshot/releases/latest).
+1. Download `earshot-2.0.4.hmod` from the [latest release](https://github.com/selfmonoraque5/earshot/releases/latest).
 2. Put it in the `horizon-native-mods` folder of your game folder, not in `mods`. On Windows that is
    `%APPDATA%\horizon\horizon-native-mods`.
 3. In the launcher, open the Mods page and click **Build** (the first build downloads the mod SDK and takes a few
@@ -96,7 +96,7 @@ API's hooks: the server's packets (`client_packet`), chat lines (`client_chat_re
 the keys and the settings. It patches no game function, so the launcher also builds it on later Horizon builds
 where nothing it uses changed.
 
-**Windows and macOS for now.** On Linux the launcher refuses it: Earshot's audio library (cpal) uses ALSA there,
+**Tested on Windows.** macOS should work but is untested. On Linux the launcher refuses it: Earshot's audio library (cpal) uses ALSA there,
 which the game links too, and a mod may not link a second copy. A Linux version is being worked on.
 
 The voice server for Horizon dedicated servers needs a hook the mod API doesn't have yet (a player's custom payloads

@@ -1,6 +1,6 @@
 id = "earshot"
 name = "Earshot"
-version = "2.0.3"
+version = "2.0.4"
 description = "Proximity voice chat that works with Simple Voice Chat servers: 3D audio, push to talk, whisper, voice groups. An independent project, not affiliated with Simple Voice Chat."
 authors = ["selfmonoraque5"]
 license = "MIT AND BSD-3-Clause"
@@ -14,7 +14,7 @@ capabilities = ["registries"]
 
 [native]
 game = "26.3"
-horizon = "5ef7734fdd854add5efd6817178be3c988d8d050"
+horizon = "f037744a79f9982c47876f49c5a3067279f88706"
 mixins = "e59da9094f0c2fdda6c627fe9eff22dec6a906f0"
 
 # No game patch in this version: the voice server's patch broke with Horizon's gameplay split
