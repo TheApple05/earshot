@@ -1,6 +1,6 @@
 id = "earshot"
 name = "Earshot"
-version = "2.0.6"
+version = "2.0.7"
 description = "Proximity voice chat that works with Simple Voice Chat servers: 3D audio, push to talk, whisper, voice groups. An independent project, not affiliated with Simple Voice Chat."
 authors = ["selfmonoraque5"]
 license = "MIT AND BSD-3-Clause"
@@ -9,7 +9,7 @@ credits = "An independent project, not affiliated with Simple Voice Chat. Opus b
 homepage = "https://github.com/selfmonoraque5/earshot"
 issues = "https://github.com/selfmonoraque5/earshot/issues"
 api = "0.2"
-side = "both"
+side = "client"
 capabilities = ["registries"]
 
 [native]
